@@ -4,15 +4,21 @@ const cors = require("cors");
 const morgan = require("morgan");
 const connectDB = require("./config/db");
 
-const app = express(); // forced restart
+const app = express();
 
-// Connect to Database
-connectDB();
-
-// Middleware
 app.use(express.json());
 app.use(cors());
 app.use(morgan("dev"));
+
+// Middleware para conectar Mongo por request
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Routes
 app.use("/api/auth", require("./routes/authRoutes"));
@@ -24,11 +30,8 @@ app.use("/api/persons", require("./routes/personRoutes"));
 app.use("/api/current-accounts", require("./routes/currentAccountRoutes"));
 
 app.get("/", (req, res) => {
-  res.send("API is running...");
+  res.json({ ok: true });
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// 👇 CLAVE PARA VERCEL
+module.exports = app;
