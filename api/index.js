@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
-const connectDB = require("./config/db");
+const connectDB = require("../src/config/db");
 
 const app = express();
 
@@ -21,13 +21,13 @@ app.use(async (req, res, next) => {
 });
 
 // Routes
-app.use("/api/auth", require("./routes/authRoutes"));
-app.use("/api/shareholders", require("./routes/shareholderRoutes"));
-app.use("/api/groups", require("./routes/groupRoutes"));
-app.use("/api/loans", require("./routes/loanRoutes"));
-app.use("/api/users", require("./routes/userRoutes"));
-app.use("/api/persons", require("./routes/personRoutes"));
-app.use("/api/current-accounts", require("./routes/currentAccountRoutes"));
+app.use("/api/auth", require("../src/routes/authRoutes"));
+app.use("/api/shareholders", require("../src/routes/shareholderRoutes"));
+app.use("/api/groups", require("../src/routes/groupRoutes"));
+app.use("/api/loans", require("../src/routes/loanRoutes"));
+app.use("/api/users", require("../src/routes/userRoutes"));
+app.use("/api/persons", require("../src/routes/personRoutes"));
+app.use("/api/current-accounts", require("../src/routes/currentAccountRoutes"));
 
 app.get("/", (req, res) => {
   res.json({ ok: true });
