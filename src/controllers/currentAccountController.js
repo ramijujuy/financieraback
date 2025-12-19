@@ -214,7 +214,11 @@ exports.updateInstallment = async (req, res) => {
     }
 
     if (observation) installment.observation = observation;
-    if (req.body.dueDate) installment.dueDate = req.body.dueDate;
+    if (req.body.dueDate) {
+      const d = new Date(req.body.dueDate);
+      d.setHours(12, 0, 0, 0);
+      installment.dueDate = d;
+    }
 
     account.updatedAt = new Date();
     await account.save();

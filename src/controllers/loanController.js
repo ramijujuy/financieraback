@@ -183,7 +183,14 @@ exports.createLoan = async (req, res) => {
       }
     }
 
-    const startDate = req.body.startDate ? new Date(req.body.startDate) : new Date();
+    let startDate;
+    if (req.body.startDate) {
+      // Fix: set time to 12:00 PM to avoid timezone issues shifting the day
+      startDate = new Date(req.body.startDate);
+      startDate.setHours(12, 0, 0, 0);
+    } else {
+      startDate = new Date();
+    }
     const interestRate = 15;
 
     // Calculate Group Installments (Total)
