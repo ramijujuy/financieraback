@@ -493,6 +493,6 @@ exports.recalculateGroupsStatus = async (req, res) => {
 };
 
 // Aplicar middleware en rutas específicas
-router.put("/members/:memberId", isStaff, updateMemberStatus);
-router.post("/groups", isStaff, createGroup);
-router.get("/shareholders", isStaff, getShareholders);
+////router.put("/members/:memberId", isStaff, updateMemberStatus);
+////router.post("/groups", isStaff, createGroup);
+//router.get("/shareholders", isStaff, getShareholders);
