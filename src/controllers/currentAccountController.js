@@ -194,7 +194,12 @@ exports.updateInstallment = async (req, res) => {
         .status(404)
         .json({ success: false, error: "Installment not found" });
 
-    if (paidDate) installment.paidDate = paidDate;
+    if (paidDate) {
+      // Fix Timezoone issue: force 12:00 PM UTC
+      const d = new Date(paidDate);
+      d.setUTCHours(12, 0, 0, 0);
+      installment.paidDate = d;
+    }
 
     // Handle payment amount
     if (req.body.amountPaid !== undefined) {

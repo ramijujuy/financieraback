@@ -280,19 +280,31 @@ exports.getShareholderProfits = async (req, res) => {
 
         const profit = interestPortion * shareFraction;
 
+        // Calculate Capital Recovered
+        // amount is the full installment amount paid
+        // interestPortion is the total interest part of that amount
+        // capitalPart is the rest
+        const capitalPart = amount - interestPortion;
+        const capitalRecovered = capitalPart * shareFraction;
+
         if (!shareholderProfits[shareholderId]) {
           shareholderProfits[shareholderId] = {
             shareholderId,
             totalProfit: 0,
+            totalCapitalRecovered: 0,
             details: [],
           };
         }
 
         shareholderProfits[shareholderId].totalProfit += profit;
+        shareholderProfits[shareholderId].totalCapitalRecovered += capitalRecovered;
+
         shareholderProfits[shareholderId].details.push({
           loanId: loan._id,
           paidDate: payment.paidDate,
+          dueDate: payment.dueDate,
           profit,
+          capitalRecovered,
           installmentAmount: amount,
         });
       }
@@ -306,6 +318,7 @@ exports.getShareholderProfits = async (req, res) => {
         result.push({
           shareholder: sh,
           totalProfit: shareholderProfits[id].totalProfit,
+          totalCapitalRecovered: shareholderProfits[id].totalCapitalRecovered,
           details: shareholderProfits[id].details,
         });
       }
