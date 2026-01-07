@@ -15,16 +15,16 @@ router.use(protect);
 
 router
   .route("/")
-  .get(authorize("admin", "administrativo"), getPersons)
-  .post(authorize("admin", "administrativo"), createPerson);
+  .get(authorize("admin", "administrativo", "staff"), getPersons)
+  .post(authorize("admin", "administrativo", "staff"), createPerson);
 router
   .route("/:id")
-  .get(authorize("admin", "administrativo"), getPerson)
-  .put(authorize("admin", "administrativo"), updatePerson)
+  .get(authorize("admin", "administrativo", "staff"), getPerson)
+  .put(authorize("admin", "administrativo", "staff"), updatePerson)
   .delete(authorize("admin"), archivePerson);
 
 router
   .route("/:id/group")
-  .put(authorize("admin", "administrativo"), updatePersonGroup);
+  .put(authorize("admin", "administrativo", "staff"), updatePersonGroup);
 
 module.exports = router;
