@@ -2,6 +2,9 @@ const Group = require("../models/Group");
 const Person = require("../models/Person");
 const CurrentAccount = require("../models/CurrentAccount");
 
+// Middleware para verificar acceso de usuarios Staff
+const { isStaff } = require("../middleware/auth");
+
 // @desc    Get all groups
 // @route   GET /api/groups
 // @access  Public
@@ -45,9 +48,11 @@ exports.getGroups = async (req, res) => {
       })
     );
 
-    res
-      .status(200)
-      .json({ success: true, count: groupsWithStatus.length, data: groupsWithStatus });
+    res.status(200).json({
+      success: true,
+      count: groupsWithStatus.length,
+      data: groupsWithStatus,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -486,3 +491,8 @@ exports.recalculateGroupsStatus = async (req, res) => {
     res.status(400).json({ success: false, error: error.message });
   }
 };
+
+// Aplicar middleware en rutas específicas
+router.put("/members/:memberId", isStaff, updateMemberStatus);
+router.post("/groups", isStaff, createGroup);
+router.get("/shareholders", isStaff, getShareholders);

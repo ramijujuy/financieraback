@@ -46,7 +46,11 @@ exports.getPersons = async (req, res) => {
 
     res
       .status(200)
-      .json({ success: true, count: personsWithStatus.length, data: personsWithStatus });
+      .json({
+        success: true,
+        count: personsWithStatus.length,
+        data: personsWithStatus,
+      });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -192,6 +196,12 @@ exports.updatePerson = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, error: "Person not found" });
+
+    // Verificar y guardar cambios en estado financiero
+    if (updates.estadoFinancieroChecked !== undefined) {
+      person.estadoFinancieroChecked = updates.estadoFinancieroChecked;
+    }
+    await person.save();
 
     // Recompute person status
     const hasRejections =

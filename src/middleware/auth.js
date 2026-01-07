@@ -45,3 +45,13 @@ exports.authorize = (...roles) => {
     next();
   };
 };
+
+// Middleware para verificar roles de usuario
+exports.isStaff = (req, res, next) => {
+  if (req.user && req.user.role === "staff") {
+    return next();
+  }
+  return res
+    .status(403)
+    .json({ message: "Acceso denegado: Solo para usuarios de staff" });
+};
