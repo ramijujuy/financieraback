@@ -24,75 +24,202 @@ app.use(morgan("dev"));
 
 // Middleware para conectar Mongo por request
 app.use(async (req, res, next) => {
-    try {
-        await connectDB();
-        next();
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- ROUTES DEFINED DIRECTLY ON APP (NO ROUTER) ---
 
 // Auth
-app.post("/api/auth/register", authController.register);
-app.post("/api/auth/login", authController.login);
-app.get("/api/auth/me", protect, authController.getMe);
-app.put("/api/auth/updatedetails", protect, authController.updateDetails);
-app.put("/api/auth/updatepassword", protect, authController.updatePassword);
+app.post("/auth/register", authController.register);
+app.post("/auth/login", authController.login);
+app.get("/auth/me", protect, authController.getMe);
+app.put("/auth/updatedetails", protect, authController.updateDetails);
+app.put("/auth/updatepassword", protect, authController.updatePassword);
 
 // Shareholders
-app.get("/api/shareholders", protect, shareholderController.getShareholders);
-app.post("/api/shareholders", protect, authorize("admin"), shareholderController.createShareholder);
-app.get("/api/shareholders/profits", protect, authorize("admin", "administrativo"), shareholderController.getShareholderProfits);
-app.get("/api/shareholders/:id/account", protect, authorize("admin", "administrativo"), shareholderController.getShareholderAccount);
-app.get("/api/shareholders/:id", protect, shareholderController.getShareholder);
-app.put("/api/shareholders/:id", protect, authorize("admin"), shareholderController.updateShareholder);
-app.delete("/api/shareholders/:id", protect, authorize("admin"), shareholderController.deleteShareholder);
+app.get("/shareholders", protect, shareholderController.getShareholders);
+app.post(
+  "/shareholders",
+  protect,
+  authorize("admin"),
+  shareholderController.createShareholder
+);
+app.get(
+  "/shareholders/profits",
+  protect,
+  authorize("admin", "administrativo"),
+  shareholderController.getShareholderProfits
+);
+app.get(
+  "/shareholders/:id/account",
+  protect,
+  authorize("admin", "administrativo"),
+  shareholderController.getShareholderAccount
+);
+app.get("/shareholders/:id", protect, shareholderController.getShareholder);
+app.put(
+  "/shareholders/:id",
+  protect,
+  authorize("admin"),
+  shareholderController.updateShareholder
+);
+app.delete(
+  "/shareholders/:id",
+  protect,
+  authorize("admin"),
+  shareholderController.deleteShareholder
+);
 
 // Groups
-app.get("/api/groups", groupController.getGroups);
-app.post("/api/groups", isStaff, groupController.createGroup);
-app.get("/api/groups/:id", groupController.getGroup);
-app.put("/api/groups/:id", protect, groupController.updateGroup);
-app.post("/api/groups/:groupId/members", groupController.addMember);
-app.delete("/api/groups/:groupId/members/:memberId", protect, groupController.removeMember);
-app.get("/api/groups/:id/eligibility", protect, groupController.getGroupEligibility);
-app.put("/api/groups/members/:memberId", isStaff, groupController.updateMemberStatus);
-app.post("/api/groups/recalculate/status", protect, authorize("admin"), groupController.recalculateGroupsStatus);
+app.get("/groups", groupController.getGroups);
+app.post("/groups", isStaff, groupController.createGroup);
+app.get("/groups/:id", groupController.getGroup);
+app.put("/groups/:id", protect, groupController.updateGroup);
+app.post("/groups/:groupId/members", groupController.addMember);
+app.delete(
+  "/groups/:groupId/members/:memberId",
+  protect,
+  groupController.removeMember
+);
+app.get(
+  "/groups/:id/eligibility",
+  protect,
+  groupController.getGroupEligibility
+);
+app.put(
+  "/groups/members/:memberId",
+  isStaff,
+  groupController.updateMemberStatus
+);
+app.post(
+  "/groups/recalculate/status",
+  protect,
+  authorize("admin"),
+  groupController.recalculateGroupsStatus
+);
 
 // Loans
-app.get("/api/loans", protect, authorize("admin", "administrativo"), loanController.getLoans);
-app.post("/api/loans", protect, authorize("admin"), loanController.createLoan);
-app.get("/api/loans/:id", protect, authorize("admin", "administrativo"), loanController.getLoan);
+app.get(
+  "/loans",
+  protect,
+  authorize("admin", "administrativo"),
+  loanController.getLoans
+);
+app.post("/loans", protect, authorize("admin"), loanController.createLoan);
+app.get(
+  "/loans/:id",
+  protect,
+  authorize("admin", "administrativo"),
+  loanController.getLoan
+);
 
 // Users
-app.get("/api/users", protect, authorize("admin"), userController.getUsers);
-app.post("/api/users", protect, authorize("admin"), userController.createUser);
-app.get("/api/users/:id", protect, authorize("admin"), userController.getUser);
-app.put("/api/users/:id", protect, authorize("admin"), userController.updateUser);
-app.delete("/api/users/:id", protect, authorize("admin"), userController.deleteUser);
+app.get("/users", protect, authorize("admin"), userController.getUsers);
+app.post("/users", protect, authorize("admin"), userController.createUser);
+app.get("/users/:id", protect, authorize("admin"), userController.getUser);
+app.put("/users/:id", protect, authorize("admin"), userController.updateUser);
+app.delete(
+  "/users/:id",
+  protect,
+  authorize("admin"),
+  userController.deleteUser
+);
 
 // Persons
-app.get("/api/persons", protect, authorize("admin", "administrativo"), personController.getPersons);
-app.post("/api/persons", protect, authorize("admin", "administrativo"), personController.createPerson);
-app.put("/api/persons/:id/group", protect, authorize("admin", "administrativo"), personController.updatePersonGroup);
-app.delete("/api/persons/:id", protect, authorize("admin"), personController.archivePerson);
-app.get("/api/persons/:id", protect, authorize("admin", "administrativo"), personController.getPerson);
-app.put("/api/persons/:id", protect, authorize("admin", "administrativo"), personController.updatePerson);
+app.get(
+  "/persons",
+  protect,
+  authorize("admin", "administrativo"),
+  personController.getPersons
+);
+app.post(
+  "/persons",
+  protect,
+  authorize("admin", "administrativo"),
+  personController.createPerson
+);
+app.put(
+  "/persons/:id/group",
+  protect,
+  authorize("admin", "administrativo"),
+  personController.updatePersonGroup
+);
+app.delete(
+  "/persons/:id",
+  protect,
+  authorize("admin"),
+  personController.archivePerson
+);
+app.get(
+  "/persons/:id",
+  protect,
+  authorize("admin", "administrativo"),
+  personController.getPerson
+);
+app.put(
+  "/persons/:id",
+  protect,
+  authorize("admin", "administrativo"),
+  personController.updatePerson
+);
 
 // Current Accounts
-app.get("/api/current-accounts", protect, authorize("admin", "administrativo"), currentAccountController.getCurrentAccounts);
-app.post("/api/current-accounts", protect, authorize("admin"), currentAccountController.createCurrentAccount);
-app.get("/api/current-accounts/collections", protect, authorize("admin", "administrativo"), currentAccountController.getCollections);
-app.get("/api/current-accounts/person/:personId", protect, authorize("admin", "administrativo"), currentAccountController.getCurrentAccountByPerson);
-app.get("/api/current-accounts/group/:groupId", protect, authorize("admin", "administrativo"), currentAccountController.getCurrentAccountByGroup);
-app.get("/api/current-accounts/:id", protect, authorize("admin", "administrativo"), currentAccountController.getCurrentAccount);
-app.patch("/api/current-accounts/:id", protect, authorize("admin"), currentAccountController.updateAccountStatus);
-app.put("/api/current-accounts/:id/installments/:installmentNumber", protect, authorize("admin", "administrativo"), currentAccountController.updateInstallment);
+app.get(
+  "/current-accounts",
+  protect,
+  authorize("admin", "administrativo"),
+  currentAccountController.getCurrentAccounts
+);
+app.post(
+  "/current-accounts",
+  protect,
+  authorize("admin"),
+  currentAccountController.createCurrentAccount
+);
+app.get(
+  "/current-accounts/collections",
+  protect,
+  authorize("admin", "administrativo"),
+  currentAccountController.getCollections
+);
+app.get(
+  "/current-accounts/person/:personId",
+  protect,
+  authorize("admin", "administrativo"),
+  currentAccountController.getCurrentAccountByPerson
+);
+app.get(
+  "/current-accounts/group/:groupId",
+  protect,
+  authorize("admin", "administrativo"),
+  currentAccountController.getCurrentAccountByGroup
+);
+app.get(
+  "/current-accounts/:id",
+  protect,
+  authorize("admin", "administrativo"),
+  currentAccountController.getCurrentAccount
+);
+app.patch(
+  "/current-accounts/:id",
+  protect,
+  authorize("admin"),
+  currentAccountController.updateAccountStatus
+);
+app.put(
+  "/current-accounts/:id/installments/:installmentNumber",
+  protect,
+  authorize("admin", "administrativo"),
+  currentAccountController.updateInstallment
+);
 
 app.get("/", (req, res) => {
-    res.json({ ok: true, msg: "API Running with Flattened Routes" });
+  res.json({ ok: true, msg: "API Running with Flattened Routes" });
 });
 
 module.exports = app;
