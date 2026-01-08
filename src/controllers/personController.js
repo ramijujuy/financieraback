@@ -44,13 +44,11 @@ exports.getPersons = async (req, res) => {
       })
     );
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        count: personsWithStatus.length,
-        data: personsWithStatus,
-      });
+    res.status(200).json({
+      success: true,
+      count: personsWithStatus.length,
+      data: personsWithStatus,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -203,17 +201,28 @@ exports.updatePerson = async (req, res) => {
     }
     await person.save();
 
-    // Recompute person status ONLY if status was not manually provided
-    if (updates.status !== undefined) {
-      person.status = updates.status;
+    // Recompute person status
+    const hasRejections =
+      person.dniRejection ||
+      person.estadoFinancieroRejection ||
+      person.carpetaCompletaRejection ||
+      person.verificacionRejection ||
+      person.boletaServicioRejection ||
+      person.garanteRejection;
+    const allChecked =
+      person.dniChecked &&
+      person.estadoFinancieroChecked &&
+      person.carpetaCompletaChecked &&
+      person.verificacionChecked &&
+      person.boletaServicioChecked &&
+      person.garanteChecked;
+
+    if (hasRejections) {
+      person.status = "Rejected";
+    } else if (allChecked) {
+      person.status = "Approved";
     } else {
-      if (hasRejections) {
-        person.status = "Rejected";
-      } else if (allChecked) {
-        person.status = "Approved";
-      } else {
-        person.status = "Pending";
-      }
+      person.status = "Pending";
     }
     await person.save();
 

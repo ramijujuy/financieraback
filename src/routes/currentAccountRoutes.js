@@ -30,10 +30,7 @@ router
 
 router
   .route("/person/:personId")
-  .get(
-    authorize("admin", "administrativo", "staff"),
-    getCurrentAccountByPerson
-  );
+  .get(authorize("admin", "administrativo"), getCurrentAccountByPerson);
 
 router
   .route("/group/:groupId")

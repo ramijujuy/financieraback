@@ -194,12 +194,7 @@ exports.updateInstallment = async (req, res) => {
         .status(404)
         .json({ success: false, error: "Installment not found" });
 
-    if (paidDate) {
-      // Fix Timezoone issue: force 12:00 PM UTC
-      const d = new Date(paidDate);
-      d.setUTCHours(12, 0, 0, 0);
-      installment.paidDate = d;
-    }
+    if (paidDate) installment.paidDate = paidDate;
 
     // Handle payment amount
     if (req.body.amountPaid !== undefined) {
@@ -207,7 +202,8 @@ exports.updateInstallment = async (req, res) => {
       installment.amountPaid = (installment.amountPaid || 0) + payment;
 
       // Auto-update status based on amount paid
-      if (installment.amountPaid >= installment.amount - 0.01) { // Tolerance for float
+      if (installment.amountPaid >= installment.amount - 0.01) {
+        // Tolerance for float
         installment.status = "paid";
         if (!installment.paidDate) installment.paidDate = new Date();
       } else if (installment.amountPaid > 0) {

@@ -410,10 +410,7 @@ exports.updateMemberStatus = async (req, res) => {
             m.verificacionRejection
         );
 
-        if (status) {
-          // Manual override provided in this request, respect it
-          group.status = status;
-        } else if (allApt) {
+        if (allApt) {
           group.status = "Approved";
         } else if (anyRejected) {
           group.status = "Rejected";
