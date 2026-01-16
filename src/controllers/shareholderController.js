@@ -266,6 +266,10 @@ exports.getShareholderProfits = async (req, res) => {
       matchStage["installments.paidDate"] = { $gte: start, $lte: end };
     }
 
+    // IMPORTANT: Filter by accountType="person" to avoid double counting Group + Member accounts
+    // and because Group Accounts don't update their status in DB (virtualized only).
+    matchStage["accountType"] = "person";
+
     const payments = await CurrentAccount.aggregate([
       { $unwind: "$installments" },
       {
