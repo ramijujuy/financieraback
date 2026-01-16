@@ -23,20 +23,46 @@ exports.getGroups = async (req, res) => {
         let isMoroso = false;
 
         if (account) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          account.installments.forEach((inst) => {
-            if (inst.status !== "paid") {
-              totalDebt += inst.amount || 0;
-              const dueDate = new Date(inst.dueDate);
-              dueDate.setHours(0, 0, 0, 0);
-
-              if (dueDate < today) {
-                isMoroso = true;
-              }
-            }
+          // Check for linked person accounts to aggregate debt
+          const personAccounts = await CurrentAccount.find({
+            loan: account.loan,
+            accountType: "person",
           });
+
+          if (personAccounts.length > 0) {
+            // Aggregate from members
+            personAccounts.forEach(pa => {
+              (pa.installments || []).forEach(inst => {
+                if (inst.status !== "paid") {
+                  totalDebt += inst.amount || 0;
+                  const dueDate = new Date(inst.dueDate);
+                  dueDate.setHours(0, 0, 0, 0);
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+
+                  if (dueDate < today) {
+                    isMoroso = true;
+                  }
+                }
+              });
+            });
+          } else {
+            // Fallback to group account (direct loan)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            account.installments.forEach((inst) => {
+              if (inst.status !== "paid") {
+                totalDebt += inst.amount || 0;
+                const dueDate = new Date(inst.dueDate);
+                dueDate.setHours(0, 0, 0, 0);
+
+                if (dueDate < today) {
+                  isMoroso = true;
+                }
+              }
+            });
+          }
         }
 
         const groupObj = group.toObject();
@@ -76,20 +102,46 @@ exports.getGroup = async (req, res) => {
     let isMoroso = false;
 
     if (account) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      account.installments.forEach((inst) => {
-        if (inst.status !== "paid") {
-          totalDebt += inst.amount || 0;
-          const dueDate = new Date(inst.dueDate);
-          dueDate.setHours(0, 0, 0, 0);
-
-          if (dueDate < today) {
-            isMoroso = true;
-          }
-        }
+      // Check for linked person accounts to aggregate debt
+      const personAccounts = await CurrentAccount.find({
+        loan: account.loan,
+        accountType: "person",
       });
+
+      if (personAccounts.length > 0) {
+        // Aggregate from members
+        personAccounts.forEach(pa => {
+          (pa.installments || []).forEach(inst => {
+            if (inst.status !== "paid") {
+              totalDebt += inst.amount || 0;
+              const dueDate = new Date(inst.dueDate);
+              dueDate.setHours(0, 0, 0, 0);
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+
+              if (dueDate < today) {
+                isMoroso = true;
+              }
+            }
+          });
+        });
+      } else {
+        // Fallback to group account (direct loan)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        account.installments.forEach((inst) => {
+          if (inst.status !== "paid") {
+            totalDebt += inst.amount || 0;
+            const dueDate = new Date(inst.dueDate);
+            dueDate.setHours(0, 0, 0, 0);
+
+            if (dueDate < today) {
+              isMoroso = true;
+            }
+          }
+        });
+      }
     }
 
     const groupObj = group.toObject();
