@@ -69,7 +69,9 @@ exports.getCurrentAccountByGroup = async (req, res) => {
   try {
     const account = await CurrentAccount.findOne({
       group: req.params.groupId,
+      status: "active"
     })
+      .sort({ createdAt: -1 })
       .populate("group")
       .populate("loan");
     if (!account)

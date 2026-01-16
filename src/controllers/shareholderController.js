@@ -19,23 +19,57 @@ exports.getShareholders = async (req, res) => {
         let activeCapital = 0;
         let projectedProfit = 0;
 
-        activeLoans.forEach((loan) => {
+        // Use for...of to handle async properly within the map
+        for (const loan of activeLoans) {
           const contrib = loan.shareholders.find(
             (s) => s.shareholder.toString() === sh._id.toString()
           );
+
           if (contrib) {
             activeCapital += contrib.contributionAmount;
 
-            // Calculate profit
-            // Interest = Principal * Rate * Installments
-            // Shareholder Profit = Total Interest * (Contribution / Principal)
+            // Calculate FUTURE/Projected profit based on PENDING installments only
+            // 1. Get all member accounts for this loan
+            const memberAccounts = await CurrentAccount.find({
+              loan: loan._id,
+              accountType: "person"
+            });
+
+            // 2. Sum up interest from UNPAID installments
+            let loanRemainingInterest = 0;
             const rate = (loan.interestRate || 15) / 100;
-            const totalInterest =
-              loan.amount * rate * loan.numberOfInstallments;
+
+            if (memberAccounts.length > 0) {
+              memberAccounts.forEach(acc => {
+                // Count pending checks (or overdue)
+                const pendingCount = (acc.installments || []).filter(i => i.status !== 'paid').length;
+                // Interest per installment = Principal * Rate
+                // Principal for this person = acc.totalAmount
+                const interestPerInstallment = acc.totalAmount * rate;
+                loanRemainingInterest += (interestPerInstallment * pendingCount);
+              });
+            } else {
+              // Fallback if no person accounts (legacy or error), use Group Account projection
+              // Assuming Group Account reflects reality (or is virtualized, but here we query DB)
+              // This might be tricky if virtualization is only in controller response.
+              // Let's rely on Loan definition if no member accounts found.
+              // Pending Installments of the Loan itself?
+              // The Loan model doesn't track payments directly, GroupAccount does.
+              const groupAccount = await CurrentAccount.findOne({ loan: loan._id, accountType: 'group' });
+              if (groupAccount) {
+                const pendingCount = (groupAccount.installments || []).filter(i => i.status !== 'paid').length;
+                // But wait, groupAccount status might not be synced.
+                // If we have no Person Accounts, then Group Account is the source of truth.
+                const interestPerInstallment = loan.amount * rate;
+                loanRemainingInterest += (interestPerInstallment * pendingCount);
+              }
+            }
+
+            // 3. Shareholder's portion
             const shareFraction = contrib.contributionAmount / loan.amount;
-            projectedProfit += totalInterest * shareFraction;
+            projectedProfit += loanRemainingInterest * shareFraction;
           }
-        });
+        }
 
         return {
           ...sh.toObject(),
