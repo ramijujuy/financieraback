@@ -285,6 +285,7 @@ exports.getShareholderProfits = async (req, res) => {
       {
         $project: {
           installmentAmount: "$installments.amount",
+          amountPaid: "$installments.amountPaid",
           // For projected, we use dueDate. For realized, paidDate.
           relevantDate: { $ifNull: ["$installments.paidDate", "$installments.dueDate"] },
           dueDate: "$installments.dueDate",
@@ -305,7 +306,23 @@ exports.getShareholderProfits = async (req, res) => {
 
     for (const payment of payments) {
       const loan = payment.loan;
-      const amount = payment.installmentAmount;
+      // If projected, we should use the remaining amount (for partials)
+      // For realized, we use the full amount (verified by verification that it's paid? actually aggregate above matches PAID ones.
+      // Wait, if realized, we want the amount THAT WAS PAID. 
+      // If projected, we want the amount REAMINING.
+
+      let amountToProcess = payment.installmentAmount;
+
+      if (req.query.type === "projected") {
+        const paidSoFar = payment.amountPaid || 0;
+        amountToProcess = Math.max(0, payment.installmentAmount - paidSoFar);
+      }
+      // For realized, the filter is status="paid". 
+      // If status="paid", presumably full amount was paid.
+      // But if we ever support partial realized profit... complexity increases.
+      // The current logic for realized assumes full installment is paid.
+
+      const amount = amountToProcess;
 
       // Calculate Interest Fraction & Capital Fraction
       const rate = (loan.interestRate || 15) / 100;
