@@ -349,16 +349,7 @@ exports.getShareholderProfits = async (req, res) => {
       }
     }
 
-    // 2. Calculate profits
-    const shareholderProfits = {}; // Map: shareholderId -> { shareholder, totalProfit, details: [] }
 
-    for (const payment of payments) {
-      const loan = payment.loan;
-      const amount = payment.installmentAmount;
-
-      // (Redundant calculation block removed as logic moved to loop above)
-      // ... (See implementation in previous chunk)
-    }
 
     // 3. Populate shareholder names
     const result = [];
