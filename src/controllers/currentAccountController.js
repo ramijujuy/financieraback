@@ -84,45 +84,7 @@ exports.getCurrentAccountByGroup = async (req, res) => {
       accountType: "person",
     });
 
-    // Virtualize group installments based on total collected from members (aggPaid)
-    // We assume chronological payment: we pay off the first installment, then the second...
-    const virtualInstallments = account.installments.map((inst) => {
-      // Clone to avoid mutating original doc in memory unexpectedly without save
-      const vInst = { ...inst.toObject() };
 
-      // If we have enough aggregated funds to cover this installment
-      if (aggPaid >= vInst.amount - 0.01) {
-        vInst.status = "paid";
-        aggPaid -= vInst.amount; // deduce used funds
-      } else if (aggPaid > 0) {
-        vInst.status = "partial";
-        vInst.amountPaid = aggPaid;
-        aggPaid = 0; // used all funds
-      } else {
-        // No funds left
-      }
-      return vInst;
-    });
-
-    // Incluir totales agregados en la respuesta bajo `personTotals`
-    const data = account.toObject();
-    data.personTotals = { totalPaid: aggPaid + (account.personTotals?.totalPaid || 0), totalUnpaid: aggUnpaid }; // Note: logic slightly tricky if we just subtracted aggPaid. better to keep original totalPaid?
-    // Let's reset aggPaid for the summary property to be accurate to "Total Collected"
-    // Actually, above loop modifies `aggPaid`. Let's recalculate or store `totalCollected`.
-
-    // Simpler:
-    // 1. Calculate stats (done above)
-    // 2. Overwrite data.installments with virtual ones
-    data.installments = virtualInstallments;
-    // 3. Set personTotals for UI awareness
-    data.personTotals = {
-      totalPaid: (data.personTotals?.totalPaid || 0) + (personAccounts.reduce((sum, pa) => sum + (pa.totalPaid || 0), 0)), // wait loop 87 already calculated aggPaid
-      totalUnpaid: aggUnpaid
-    };
-    // Re-fix: The loop 87 calculated `aggPaid` correctly. I modified `aggPaid` in the virtualization loop.
-    // I should save `totalCollected` before virtualization.
-
-    // Correct Implementation in one go:
 
     let totalCollected = 0;
     let totalPending = 0;
