@@ -41,9 +41,7 @@ exports.getGroups = async (req, res) => {
 
         const groupObj = group.toObject();
         groupObj.totalDebt = totalDebt;
-        if (isMoroso) {
-          groupObj.status = "Moroso";
-        }
+        groupObj.isMoroso = isMoroso;
         return groupObj;
       })
     );
@@ -96,9 +94,7 @@ exports.getGroup = async (req, res) => {
 
     const groupObj = group.toObject();
     groupObj.totalDebt = totalDebt;
-    if (isMoroso) {
-      groupObj.status = "Moroso";
-    }
+    groupObj.isMoroso = isMoroso;
 
     res.status(200).json({ success: true, data: groupObj });
   } catch (error) {
