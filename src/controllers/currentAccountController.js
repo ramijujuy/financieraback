@@ -15,7 +15,8 @@ exports.getCurrentAccounts = async (req, res) => {
           model: "Group",
         },
       })
-      .populate("loan");
+      .populate("loan")
+      .populate("group");
     res
       .status(200)
       .json({ success: true, count: accounts.length, data: accounts });

@@ -253,11 +253,14 @@ exports.getShareholderProfits = async (req, res) => {
     }
 
     // 1. Find installments in range
+    // 1. Find installments in range
+    // NOTE: For 'projected', we want PENDING installments in the range.
+    // For 'realized', we want PAID installments in the range.
+
     const matchStage = {};
     if (type === "projected") {
+      matchStage["installments.status"] = { $ne: "paid" }; // Pending or partial
       matchStage["installments.dueDate"] = { $gte: start, $lte: end };
-      // For projections, we consider all active installments, or maybe pending/future ones.
-      // Let's include all for the period to show total expected return.
     } else {
       matchStage["installments.status"] = "paid";
       matchStage["installments.paidDate"] = { $gte: start, $lte: end };
@@ -266,7 +269,7 @@ exports.getShareholderProfits = async (req, res) => {
     const payments = await CurrentAccount.aggregate([
       { $unwind: "$installments" },
       {
-        $match: matchStage,
+        $match: matchStage, // Filter installments
       },
       {
         $lookup: {
@@ -282,12 +285,69 @@ exports.getShareholderProfits = async (req, res) => {
       {
         $project: {
           installmentAmount: "$installments.amount",
-          paidDate: "$installments.paidDate",
+          // For projected, we use dueDate. For realized, paidDate.
+          relevantDate: { $ifNull: ["$installments.paidDate", "$installments.dueDate"] },
           dueDate: "$installments.dueDate",
+          paidDate: "$installments.paidDate",
+          status: "$installments.status",
           loan: "$loanData",
+          // Calculate Capital vs Interest breakdown
+          // Interest = Principal * Rate
+          // Installment = Principal + Interest = Principal * (1 + Rate)
+          // Therefore Principal (Capital) = Installment / (1 + Rate)
+          // And Interest = Installment - Principal
         },
       },
     ]);
+
+    // 2. Calculate profits
+    const shareholderProfits = {}; // Map: shareholderId -> { totalProfit, totalCapitalRecovered, details: [] }
+
+    for (const payment of payments) {
+      const loan = payment.loan;
+      const amount = payment.installmentAmount;
+
+      // Calculate Interest Fraction & Capital Fraction
+      const rate = (loan.interestRate || 15) / 100;
+      // Formula: Installment = P_installment * (1 + rate)
+      // So P_installment = Installment / (1 + rate)
+      const capitalPart = amount / (1 + rate);
+      const interestPart = amount - capitalPart;
+
+      // Distribute to shareholders
+      for (const share of loan.shareholders) {
+        const shareholderId = share.shareholder.toString();
+        const contribution = share.contributionAmount;
+        const totalPrincipal = loan.amount;
+
+        // Share of the loan
+        const shareFraction = contribution / totalPrincipal;
+
+        const profitShare = interestPart * shareFraction;
+        const capitalShare = capitalPart * shareFraction;
+
+        if (!shareholderProfits[shareholderId]) {
+          shareholderProfits[shareholderId] = {
+            shareholderId,
+            totalProfit: 0,
+            totalCapitalRecovered: 0,
+            details: [],
+          };
+        }
+
+        shareholderProfits[shareholderId].totalProfit += profitShare;
+        shareholderProfits[shareholderId].totalCapitalRecovered += capitalShare;
+
+        shareholderProfits[shareholderId].details.push({
+          loanId: loan._id,
+          paidDate: payment.paidDate,
+          dueDate: payment.dueDate,
+          profit: profitShare,
+          capitalRecovered: capitalShare,
+          installmentAmount: amount * shareFraction, // Share of total installment
+        });
+      }
+    }
 
     // 2. Calculate profits
     const shareholderProfits = {}; // Map: shareholderId -> { shareholder, totalProfit, details: [] }
@@ -296,44 +356,8 @@ exports.getShareholderProfits = async (req, res) => {
       const loan = payment.loan;
       const amount = payment.installmentAmount;
 
-      // Calculate Interest Fraction
-      // interestRate is percentage, e.g. 15
-      const rate = (loan.interestRate || 15) / 100;
-      const n = loan.numberOfInstallments;
-      // Total Interest = P * r * n
-      // Total Amount = P * (1 + r * n)
-      // Interest Fraction = (P * r * n) / (P * (1 + r * n)) = (r * n) / (1 + r * n)
-      const interestFraction = (rate * n) / (1 + rate * n);
-
-      const interestPortion = amount * interestFraction;
-
-      // Distribute to shareholders
-      for (const share of loan.shareholders) {
-        const shareholderId = share.shareholder.toString();
-        const contribution = share.contributionAmount;
-        const principal = loan.amount;
-
-        // Share of the loan
-        const shareFraction = contribution / principal;
-
-        const profit = interestPortion * shareFraction;
-
-        if (!shareholderProfits[shareholderId]) {
-          shareholderProfits[shareholderId] = {
-            shareholderId,
-            totalProfit: 0,
-            details: [],
-          };
-        }
-
-        shareholderProfits[shareholderId].totalProfit += profit;
-        shareholderProfits[shareholderId].details.push({
-          loanId: loan._id,
-          paidDate: payment.paidDate,
-          profit,
-          installmentAmount: amount,
-        });
-      }
+      // (Redundant calculation block removed as logic moved to loop above)
+      // ... (See implementation in previous chunk)
     }
 
     // 3. Populate shareholder names
@@ -344,6 +368,7 @@ exports.getShareholderProfits = async (req, res) => {
         result.push({
           shareholder: sh,
           totalProfit: shareholderProfits[id].totalProfit,
+          totalCapitalRecovered: shareholderProfits[id].totalCapitalRecovered,
           details: shareholderProfits[id].details,
         });
       }
