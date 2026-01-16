@@ -17,9 +17,55 @@ exports.getCurrentAccounts = async (req, res) => {
       })
       .populate("loan")
       .populate("group");
+
+    const processedAccounts = await Promise.all(
+      accounts.map(async (acc) => {
+        if (acc.accountType === "group" && acc.loan) {
+          try {
+            // Virtualize Group Accounts logic
+            const personAccounts = await CurrentAccount.find({
+              loan: acc.loan._id,
+              accountType: "person",
+            });
+
+            let totalCollected = 0;
+            for (const pa of personAccounts) {
+              totalCollected += (pa.installments || [])
+                .filter((i) => i.status === "paid")
+                .reduce((s, it) => s + (it.amount || 0), 0);
+            }
+
+            let fundsRemaining = totalCollected;
+            const virtualInsts = acc.installments.map((inst) => {
+              const vInst = { ...inst.toObject() };
+              if (vInst.status !== "paid") {
+                if (fundsRemaining >= vInst.amount - 0.01) {
+                  vInst.status = "paid";
+                  fundsRemaining -= vInst.amount;
+                } else if (fundsRemaining > 0) {
+                  vInst.status = "partial";
+                  vInst.amountPaid = (vInst.amountPaid || 0) + fundsRemaining;
+                  fundsRemaining = 0;
+                }
+              }
+              return vInst;
+            });
+
+            const accObj = acc.toObject();
+            accObj.installments = virtualInsts;
+            return accObj;
+          } catch (err) {
+            console.error("Error virtualizing group account", err);
+            return acc.toObject();
+          }
+        }
+        return acc.toObject();
+      })
+    );
+
     res
       .status(200)
-      .json({ success: true, count: accounts.length, data: accounts });
+      .json({ success: true, count: processedAccounts.length, data: processedAccounts });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
