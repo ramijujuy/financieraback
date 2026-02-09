@@ -143,7 +143,7 @@ exports.getCurrentAccountByGroup = async (req, res) => {
 
       totalPending += (pa.installments || [])
         .filter((i) => i.status !== "paid")
-        .reduce((s, it) => s + (it.amount || 0), 0);
+        .reduce((s, it) => s + (it.amount || 0) - (it.amountPaid || 0), 0);
     }
 
     let fundsRemaining = totalCollected;
@@ -295,10 +295,15 @@ exports.updateInstallment = async (req, res) => {
 
     // Check if the loan is fully paid
     if (account.loan) {
-      const allAccountsForLoan = await CurrentAccount.find({ loan: account.loan });
+      // Only check person-level accounts for loan completion. 
+      // Group-level accounts are copies/virtualizations and might not be marked as paid.
+      const allPersonAccounts = await CurrentAccount.find({
+        loan: account.loan,
+        accountType: 'person'
+      });
 
       let allPaid = true;
-      for (const acc of allAccountsForLoan) {
+      for (const acc of allPersonAccounts) {
         const hasUnpaid = acc.installments.some(inst => inst.status !== 'paid');
         if (hasUnpaid) {
           allPaid = false;

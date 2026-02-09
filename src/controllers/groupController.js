@@ -34,7 +34,7 @@ exports.getGroups = async (req, res) => {
             personAccounts.forEach(pa => {
               (pa.installments || []).forEach(inst => {
                 if (inst.status !== "paid") {
-                  totalDebt += inst.amount || 0;
+                  totalDebt += (inst.amount || 0) - (inst.amountPaid || 0);
                   const dueDate = new Date(inst.dueDate);
                   dueDate.setHours(0, 0, 0, 0);
                   const today = new Date();
@@ -53,7 +53,7 @@ exports.getGroups = async (req, res) => {
 
             account.installments.forEach((inst) => {
               if (inst.status !== "paid") {
-                totalDebt += inst.amount || 0;
+                totalDebt += (inst.amount || 0) - (inst.amountPaid || 0);
                 const dueDate = new Date(inst.dueDate);
                 dueDate.setHours(0, 0, 0, 0);
 
@@ -113,7 +113,7 @@ exports.getGroup = async (req, res) => {
         personAccounts.forEach(pa => {
           (pa.installments || []).forEach(inst => {
             if (inst.status !== "paid") {
-              totalDebt += inst.amount || 0;
+              totalDebt += (inst.amount || 0) - (inst.amountPaid || 0);
               const dueDate = new Date(inst.dueDate);
               dueDate.setHours(0, 0, 0, 0);
               const today = new Date();
@@ -132,7 +132,7 @@ exports.getGroup = async (req, res) => {
 
         account.installments.forEach((inst) => {
           if (inst.status !== "paid") {
-            totalDebt += inst.amount || 0;
+            totalDebt += (inst.amount || 0) - (inst.amountPaid || 0);
             const dueDate = new Date(inst.dueDate);
             dueDate.setHours(0, 0, 0, 0);
 
