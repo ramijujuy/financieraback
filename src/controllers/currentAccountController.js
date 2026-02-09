@@ -1,6 +1,7 @@
 const CurrentAccount = require("../models/CurrentAccount");
 const Loan = require("../models/Loan");
 const Person = require("../models/Person");
+const Group = require("../models/Group");
 
 // @desc    Get all current accounts
 // @route   GET /api/current-accounts
@@ -291,6 +292,38 @@ exports.updateInstallment = async (req, res) => {
 
     account.updatedAt = new Date();
     await account.save();
+
+    // Check if the loan is fully paid
+    if (account.loan) {
+      const allAccountsForLoan = await CurrentAccount.find({ loan: account.loan });
+
+      let allPaid = true;
+      for (const acc of allAccountsForLoan) {
+        const hasUnpaid = acc.installments.some(inst => inst.status !== 'paid');
+        if (hasUnpaid) {
+          allPaid = false;
+          break;
+        }
+      }
+
+      if (allPaid) {
+        // Update Loan Status
+        await Loan.findByIdAndUpdate(account.loan, { status: 'Paid' });
+
+        // Find the loan to get the groupId
+        const loan = await Loan.findById(account.loan);
+        if (loan && loan.group) {
+          // Update Group Status back to Approved
+          await Group.findByIdAndUpdate(loan.group, { status: 'Approved' });
+        }
+
+        // Close all accounts related to this loan
+        await CurrentAccount.updateMany(
+          { loan: account.loan },
+          { status: 'closed', updatedAt: new Date() }
+        );
+      }
+    }
 
     await account.populate([{ path: "person" }, { path: "loan" }]);
     const populated = account;
