@@ -35,13 +35,16 @@ exports.getGroups = async (req, res) => {
               (pa.installments || []).forEach(inst => {
                 if (inst.status !== "paid") {
                   totalDebt += (inst.amount || 0) - (inst.amountPaid || 0);
-                  const dueDate = new Date(inst.dueDate);
-                  dueDate.setHours(0, 0, 0, 0);
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
+                  const debtRemaining = (inst.amount || 0) - (inst.amountPaid || 0);
+                  if (debtRemaining > 0.01) {
+                    const dueDate = new Date(inst.dueDate);
+                    dueDate.setHours(0, 0, 0, 0);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
 
-                  if (dueDate < today) {
-                    isMoroso = true;
+                    if (dueDate < today) {
+                      isMoroso = true;
+                    }
                   }
                 }
               });
@@ -54,11 +57,14 @@ exports.getGroups = async (req, res) => {
             account.installments.forEach((inst) => {
               if (inst.status !== "paid") {
                 totalDebt += (inst.amount || 0) - (inst.amountPaid || 0);
-                const dueDate = new Date(inst.dueDate);
-                dueDate.setHours(0, 0, 0, 0);
+                const debtRemaining = (inst.amount || 0) - (inst.amountPaid || 0);
+                if (debtRemaining > 0.01) {
+                  const dueDate = new Date(inst.dueDate);
+                  dueDate.setHours(0, 0, 0, 0);
 
-                if (dueDate < today) {
-                  isMoroso = true;
+                  if (dueDate < today) {
+                    isMoroso = true;
+                  }
                 }
               }
             });
@@ -114,13 +120,16 @@ exports.getGroup = async (req, res) => {
           (pa.installments || []).forEach(inst => {
             if (inst.status !== "paid") {
               totalDebt += (inst.amount || 0) - (inst.amountPaid || 0);
-              const dueDate = new Date(inst.dueDate);
-              dueDate.setHours(0, 0, 0, 0);
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
+              const debtRemaining = (inst.amount || 0) - (inst.amountPaid || 0);
+              if (debtRemaining > 0.01) {
+                const dueDate = new Date(inst.dueDate);
+                dueDate.setHours(0, 0, 0, 0);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
 
-              if (dueDate < today) {
-                isMoroso = true;
+                if (dueDate < today) {
+                  isMoroso = true;
+                }
               }
             }
           });
@@ -133,11 +142,14 @@ exports.getGroup = async (req, res) => {
         account.installments.forEach((inst) => {
           if (inst.status !== "paid") {
             totalDebt += (inst.amount || 0) - (inst.amountPaid || 0);
-            const dueDate = new Date(inst.dueDate);
-            dueDate.setHours(0, 0, 0, 0);
+            const debtRemaining = (inst.amount || 0) - (inst.amountPaid || 0);
+            if (debtRemaining > 0.01) {
+              const dueDate = new Date(inst.dueDate);
+              dueDate.setHours(0, 0, 0, 0);
 
-            if (dueDate < today) {
-              isMoroso = true;
+              if (dueDate < today) {
+                isMoroso = true;
+              }
             }
           }
         });
@@ -537,6 +549,62 @@ exports.recalculateGroupsStatus = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Sync all groups loan statuses based on payments
+// @route   POST /api/groups/sync-all-loan-statuses
+// @access  Private (admin)
+exports.syncAllLoanStatuses = async (req, res) => {
+  try {
+    const Loan = require("../models/Loan");
+    const activeLoans = await Loan.find({ status: "Active" });
+    const results = [];
+
+    for (const loan of activeLoans) {
+      const personAccounts = await CurrentAccount.find({
+        loan: loan._id,
+        accountType: "person",
+      });
+
+      let allPaid = personAccounts.length > 0;
+      for (const acc of personAccounts) {
+        if (acc.installments.some((i) => i.status !== "paid")) {
+          allPaid = false;
+          break;
+        }
+      }
+
+      if (allPaid) {
+        loan.status = "Paid";
+        await loan.save();
+
+        const group = await Group.findById(loan.group);
+        if (group && group.status === "Active Loan") {
+          group.status = "Approved";
+          await group.save();
+        }
+
+        await CurrentAccount.updateMany(
+          { loan: loan._id },
+          { status: "closed", updatedAt: new Date() }
+        );
+
+        results.push({
+          loanId: loan._id,
+          groupId: loan.group,
+          status: "Fixed",
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 

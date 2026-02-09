@@ -8,6 +8,7 @@ const {
   removeMember,
   getGroupEligibility,
   recalculateGroupsStatus,
+  syncAllLoanStatuses,
   updateGroup,
 } = require("../controllers/groupController");
 
@@ -34,5 +35,9 @@ router.route("/:id/eligibility").get(authorize("admin"), getGroupEligibility);
 router
   .route("/recalculate/status")
   .post(authorize("admin"), recalculateGroupsStatus);
+
+router
+  .route("/sync-all-loan-statuses")
+  .post(authorize("admin"), syncAllLoanStatuses);
 
 module.exports = router;
